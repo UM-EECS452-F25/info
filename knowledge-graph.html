@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EECS 452 – DSP Knowledge Graph (D3 + JSON)</title>
+  <style>
+    html, body { height: 100%; margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; }
+    .app { display: grid; grid-template-rows: auto 1fr; height: 100%; }
+    header { padding: 12px 16px; border-bottom: 1px solid #e5e7eb; display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; }
+    header h1 { margin: 0; font-size: 18px; font-weight: 600; }
+    .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .controls input[type="text"] { padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 10px; min-width: 260px; }
+    .btn { padding: 8px 10px; border: 1px solid #e5e7eb; background: #fff; border-radius: 10px; cursor: pointer; }
+    .btn:hover { background: #f9fafb; }
+    .legend { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .legend-item { display: inline-flex; gap: 8px; align-items: center; padding: 4px 8px; border: 1px solid #e5e7eb; border-radius: 999px; font-size: 12px; background: #fff; }
+    .legend-swatch { width: 12px; height: 12px; border-radius: 3px; }
+    .main { position: relative; }
+    svg { width: 100%; height: 100%; display: block; background: #ffffff; }
+    .link { stroke: #cbd5e1; stroke-width: 1.5px; }
+    .link.depends { stroke-dasharray: 0; }
+    .link.partof { stroke-dasharray: 4 2; }
+    .link.uses { stroke-dasharray: 2 2; }
+    .link.contains { stroke-dasharray: 1 3; }
+    .node circle { stroke: #0f172a; stroke-width: 1px; }
+    .node text { pointer-events: none; font-size: 12px; fill: #0f172a; }
+    .faded { opacity: 0.15; }
+    .tooltip { position: absolute; pointer-events: none; background: #111827; color: white; font-size: 12px; padding: 8px 10px; border-radius: 8px; opacity: 0; transform: translate(-50%, -120%); white-space: nowrap; }
+    .footer { position: absolute; left: 12px; bottom: 12px; font-size: 12px; padding: 4px 8px; background: rgba(255,255,255,0.9); border: 1px solid #e5e7eb; border-radius: 8px; }
+    .error { position: absolute; right: 12px; bottom: 12px; font-size: 12px; padding: 6px 10px; background: #fee2e2; color: #7f1d1d; border: 1px solid #fecaca; border-radius: 8px; display: none; max-width: 42ch; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>EECS 452 – DSP Knowledge Graph</h1>
+      <div class="controls">
+        <input id="search" type="text" placeholder="Search topic (e.g., STFT, PCA, Kalman)…" />
+        <button id="resetBtn" class="btn" title="Reset zoom & filters">Reset</button>
+        <button id="loadJsonBtn" class="btn" title="Load dsp-kg.json">Load JSON</button>
+        <button id="downloadJsonBtn" class="btn" title="Download current graph as JSON">Download JSON</button>
+      </div>
+      <div class="legend" id="legend"></div>
+    </header>
+    <div class="main">
+      <svg id="svg"></svg>
+      <div class="tooltip" id="tooltip"></div>
+      <div class="error" id="errorBox"></div>
+      <div class="footer">Drag to pan • Scroll to zoom • Click a node to focus • Shift+Click background to clear</div>
+    </div>
+  </div>
+
+  <!-- D3 v7 -->
+  <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+  <script>
+  // =============================
+  // 1) Config & globals
+  // =============================
+  const modules = {
+    Fundamentals: '#60a5fa',
+    Sampling: '#34d399',
+    Quantization: '#fbbf24',
+    Filters: '#f472b6',
+    DFT_FFT: '#a78bfa',
+    TimeFrequency: '#22d3ee',
+    Communications: '#fb7185',
+    LinearAlgebra: '#93c5fd',
+    ML_Estimation: '#4ade80',
+  };
+  const color = (m) => modules[m] || '#94a3b8';
+  const cls = (relation) =>
+    relation === 'DEPENDS_ON' ? 'depends' :
+    relation === 'PART_OF'   ? 'partof'  :
+    relation === 'CONTAINS'  ? 'contains':
+    'uses';
+
+  // Graph data (start empty; supply via JSON)
+  const N = [];
+  const L = [];
+
+  // =============================
+  // 2) D3 setup (create simulation before binding drag)
+  // =============================
+  const svg = d3.select('#svg');
+  const width = () => svg.node().clientWidth;
+  const height = () => svg.node().clientHeight;
+
+  const zoom = d3.zoom().scaleExtent([0.25, 4]).on('zoom', (ev) => g.attr('transform', ev.transform));
+  svg.call(zoom);
+
+  // Arrow markers
+  svg.append('defs').selectAll('marker')
+    .data(['depends','partof','uses','contains'])
+    .enter().append('marker')
+      .attr('id', d => `arrow-${d}`)
+      .attr('viewBox', '0 -5 10 10')
+      .attr('refX', 18)
+      .attr('refY', 0)
+      .attr('markerWidth', 6)
+      .attr('markerHeight', 6)
+      .attr('orient', 'auto')
+    .append('path')
+      .attr('d', 'M0,-5L10,0L0,5');
+
+  const g = svg.append('g');
+
+  // Force simulation (empty initially)
+  const simulation = d3.forceSimulation(N)
+    .force('link', d3.forceLink(L).id(d => d.id).distance(linkDistance).strength(0.9))
+    .force('charge', d3.forceManyBody().strength(-600))
+    .force('center', d3.forceCenter(0, 0))
+    .force('collision', d3.forceCollide().radius(d => 14 + 0.22 * (d.label ? d.label.length : 0)))
+    .force('x', d3.forceX(d => moduleAnchorX(d.module)).strength(0.05))
+    .force('y', d3.forceY(d => moduleAnchorY(d.module)).strength(0.05))
+    .on('tick', ticked)
+    .on('end', () => fitToView(true));
+
+  // Links selection
+  let link = g.append('g').attr('stroke-linecap','round').selectAll('line')
+    .data(L, d => (d.source.id||d.source)+'→'+(d.target.id||d.target))
+    .join('line')
+      .attr('class', d => `link ${cls(d.relation)}`)
+      .attr('marker-end', d => `url(#arrow-${cls(d.relation)})`);
+
+  // Nodes selection
+  let node = g.append('g').selectAll('g')
+    .data(N, d => d.id)
+    .join(enter => {
+      const grp = enter.append('g').attr('class','node');
+      grp.append('circle').attr('r', 10).attr('fill', d => color(d.module));
+      grp.append('text').attr('x', 14).attr('y', 4).text(d => d.label);
+      grp.append('title').text(d => d.url ? `${d.label}\n${d.url}` : d.label);
+      grp.on('dblclick', (ev, d) => { if (d.url) window.open(d.url, '_blank'); });
+      return grp;
+    });
+
+  // Now that simulation exists, enable drag
+  node.call(drag(simulation));
+
+  // Legend
+  const legend = d3.select('#legend');
+  Object.entries(modules).forEach(([name, col]) => {
+    const item = legend.append('div').attr('class','legend-item');
+    item.append('div').attr('class','legend-swatch').style('background', col);
+    item.append('div').text(name);
+  });
+
+  // Initial fit (even before data)
+  fitToView();
+  window.addEventListener('resize', () => fitToView());
+
+  // =============================
+  // 3) Interactions
+  // =============================
+  const tooltip = document.getElementById('tooltip');
+  const errorBox = document.getElementById('errorBox');
+
+  node.on('mouseenter', (ev, d) => {
+    const depsIn  = L.filter(l => (l.target.id||l.target) === d.id);
+    const depsOut = L.filter(l => (l.source.id||l.source) === d.id);
+    tooltip.innerHTML = `<strong>${d.label}</strong><br/>Module: ${d.module || '—'}<br/>Prereqs: ${depsIn.length} • Unlocks: ${depsOut.length}`;
+    tooltip.style.opacity = 1;
+    const pt = svg.node().createSVGPoint(); pt.x = d.x; pt.y = d.y;
+    const sp = pt.matrixTransform(svg.node().getScreenCTM());
+    tooltip.style.left = sp.x + 'px'; tooltip.style.top = sp.y + 'px';
+    highlightNeighborhood(d);
+  });
+  node.on('mouseleave', () => { tooltip.style.opacity = 0; clearHighlight(); });
+  node.on('click', (_ev, d) => { focusNode(d); });
+  svg.on('click', (ev) => { if (ev.shiftKey) clearHighlight(); });
+
+  document.getElementById('search').addEventListener('input', (e) => {
+    const q = e.target.value.trim().toLowerCase();
+    if (!q) { clearHighlight(); return; }
+    const m = N.filter(n => n.label.toLowerCase().includes(q));
+    if (m.length) focusNode(m[0]);
+  });
+  document.getElementById('resetBtn').addEventListener('click', () => { clearHighlight(); fitToView(true); });
+
+  // =============================
+  // 4) JSON I/O and update pipeline
+  // =============================
+  document.getElementById('loadJsonBtn').addEventListener('click', () => loadJSON().catch(showError));
+  document.getElementById('downloadJsonBtn').addEventListener('click', () => downloadJSON());
+  window.addEventListener('DOMContentLoaded', () => autoLoadJSON());
+
+  async function autoLoadJSON(){
+    try { await loadJSON(); hideError(); }
+    catch (e) {
+      console.warn('dsp-kg.json not found (404). Loading built-in sample.', e);
+      showError(new Error('Could not find dsp-kg.json (404). Showing sample graph.'));
+      updateGraph(sampleNodes, sampleLinks);
+    }
+  }
+
+  async function loadJSON(url='dsp-kg.json'){
+    const res = await fetch(url, {cache:'no-store'});
+    if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`);
+    const data = await res.json();
+    // Basic schema validation (test cases)
+    const ok = Array.isArray(data.nodes) && Array.isArray(data.links);
+    console.assert(ok, 'JSON should have {nodes:[], links:[]}');
+    if (!ok) throw new Error('Invalid JSON schema');
+    runSelfTests(data.nodes, data.links); // additional checks
+    updateGraph(data.nodes, data.links);
+  }
+
+  function downloadJSON(filename='dsp-kg.json'){
+    const data = {
+      nodes: N.map(({id,label,module,type,url}) => ({id,label,module,type,url})),
+      links: L.map(({source,target,relation}) => ({source: source.id||source, target: target.id||target, relation}))
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; a.click(); URL.revokeObjectURL(a.href);
+  }
+
+  function updateGraph(nodes, links){
+    simulation.stop();
+
+    // Replace data
+    N.splice(0, N.length, ...nodes);
+    L.splice(0, L.length, ...links);
+
+    // Mark contains parent/child relationships for node sizing
+    const hasParent = new Set(), hasChildren = new Set();
+    L.forEach(l => { if (l.relation === 'CONTAINS') { hasChildren.add(l.source.id||l.source); hasParent.add(l.target.id||l.target); } });
+    const byId = new Map(N.map(n => [n.id, n]));
+    byId.forEach((n) => { n._hasParent = false; n._hasChildren = false; });
+    hasParent.forEach(id => { const n = byId.get(id); if (n) n._hasParent = true; });
+    hasChildren.forEach(id => { const n = byId.get(id); if (n) n._hasChildren = true; });
+
+    // Seed initial positions to avoid start-at-(0,0) pileups
+    const R = 200 + Math.max(0, N.length - 20) * 4;
+    N.forEach((d, i) => {
+      if (d.x == null || d.y == null) {
+        const t = (i / Math.max(1, N.length)) * 2 * Math.PI;
+        d.x = R * Math.cos(t);
+        d.y = R * Math.sin(t);
+      }
+    });
+
+    // Rebind links
+    link = link.data(L, d => (d.source.id||d.source)+'→'+(d.target.id||d.target))
+      .join(
+        enter => enter.append('line')
+          .attr('class', d => `link ${cls(d.relation)}`)
+          .attr('marker-end', d => `url(#arrow-${cls(d.relation)})`),
+        update => update
+      );
+
+    // Rebind nodes
+    node = node.data(N, d => d.id)
+      .join(
+        enter => {
+          const grp = enter.append('g').attr('class','node');
+          grp.append('circle').attr('r', d => nodeRadius(d)).attr('fill', d => color(d.module));
+          grp.append('text').attr('x', 14).attr('y', 4).text(d => d.label);
+          grp.append('title').text(d => d.url ? `${d.label}
+${d.url}` : d.label);
+          grp.on('dblclick', (ev, d) => { if (d.url) window.open(d.url, '_blank'); });
+          return grp;
+        },
+        update => update,
+        exit => exit.remove()
+      );
+
+    // Ensure radius is updated on existing nodes too
+    node.select('circle').attr('r', d => nodeRadius(d));
+
+    // Rebind interactions and drag (needed after join)
+    node.on('mouseenter', (ev, d) => {
+      const depsIn  = L.filter(l => (l.target.id||l.target) === d.id);
+      const depsOut = L.filter(l => (l.source.id||l.source) === d.id);
+      tooltip.innerHTML = `<strong>${d.label}</strong><br/>Module: ${d.module || '—'}<br/>Prereqs: ${depsIn.length} • Unlocks: ${depsOut.length}`;
+      tooltip.style.opacity = 1;
+      const pt = svg.node().createSVGPoint(); pt.x = d.x; pt.y = d.y;
+      const sp = pt.matrixTransform(svg.node().getScreenCTM());
+      tooltip.style.left = sp.x + 'px'; tooltip.style.top = sp.y + 'px';
+      highlightNeighborhood(d);
+    });
+    node.on('mouseleave', () => { tooltip.style.opacity = 0; clearHighlight(); });
+    node.on('click', (_ev, d) => { focusNode(d); });
+
+    node.call(drag(simulation));
+
+    // Restart simulation stronger so it resolves overlaps quickly
+    simulation.nodes(N);
+    simulation.force('link').links(L).distance(linkDistance);
+    simulation.alpha(1).restart();
+
+    // Fit to view after first layout kick
+    setTimeout(() => fitToView(true), 0);
+  }
+
+  // =============================
+  // 5) Utilities
+  // =============================
+  // anchors to gently separate modules in X/Y
+  function moduleAnchorX(mod){
+    const keys = Object.keys(modules);
+    const i = Math.max(0, keys.indexOf(mod));
+    const span = 120;
+    return (i - (keys.length-1)/2) * span;
+  }
+  function moduleAnchorY(mod){
+    const map = { Fundamentals: -80, Sampling: -40, Quantization: 0, Filters: 40, DFT_FFT: 80, TimeFrequency: -20, Communications: 20, LinearAlgebra: 60, ML_Estimation: -60 };
+    return map[mod] ?? 0;
+  }
+
+  function ticked(){
+    link
+      .attr('x1', d => d.source.x)
+      .attr('y1', d => d.source.y)
+      .attr('x2', d => d.target.x)
+      .attr('y2', d => d.target.y);
+    node.attr('transform', d => `translate(${d.x},${d.y})`);
+  }
+
+  function linkDistance(d){
+    if (d.relation === 'PART_OF') return 50;
+    if (d.relation === 'CONTAINS') return 55;
+    if (d.relation === 'USES') return 80;
+    return 140; // DEPENDS_ON (more space)
+  }
+
+  function nodeRadius(d){
+    if (d._hasChildren && !d._hasParent) return 12; // container
+    if (d._hasParent && !d._hasChildren) return 8;  // contained leaf
+    return 10; // regular
+  }
+
+  function drag(sim){
+    function dragstarted(event, d){ if (!event.active) sim.alphaTarget(0.2).restart(); d.fx = d.x; d.fy = d.y; }
+    function dragged(event, d){ d.fx = event.x; d.fy = event.y; }
+    function dragended(event, d){ if (!event.active) sim.alphaTarget(0); d.fx = null; d.fy = null; }
+    return d3.drag().on('start', dragstarted).on('drag', dragged).on('end', dragended);
+  }
+
+  function highlightNeighborhood(center){
+    const neigh = new Set([center.id]);
+    L.forEach(l => { const s = l.source.id||l.source, t = l.target.id||l.target; if (s===center.id) neigh.add(t); if (t===center.id) neigh.add(s); });
+    node.classed('faded', d => !neigh.has(d.id));
+    link.classed('faded', l => !(neigh.has(l.source.id||l.source) && neigh.has(l.target.id||l.target)));
+  }
+
+  function clearHighlight(){ node.classed('faded', false); link.classed('faded', false); }
+
+  function focusNode(d){
+    const t = d3.zoomIdentity.translate(width()/2 - d.x*1.2, height()/2 - d.y*1.2).scale(1.2);
+    svg.transition().duration(600).call(zoom.transform, t); highlightNeighborhood(d);
+  }
+
+  function fitToView(animated=false){
+    if (!N.length) return; // nothing to fit yet
+    const margin = 60;
+    const xs = N.map(d => d.x || 0), ys = N.map(d => d.y || 0);
+    const minX = Math.min(...xs)-margin, maxX = Math.max(...xs)+margin;
+    const minY = Math.min(...ys)-margin, maxY = Math.max(...ys)+margin;
+    const w = width(), h = height();
+    const scale = Math.min(4, Math.max(0.25, 0.9/Math.max((maxX-minX)/w, (maxY-minY)/h)));
+    const tx = (w - scale*(minX+maxX))/2, ty = (h - scale*(minY+maxY))/2;
+    const t = d3.zoomIdentity.translate(tx, ty).scale(scale);
+    (animated? svg.transition().duration(600): svg).call(zoom.transform, t);
+  }
+
+  function showError(err){ const box = document.getElementById('errorBox'); box.textContent = err.message || String(err); box.style.display = 'block'; }
+  function hideError(){ const box = document.getElementById('errorBox'); box.style.display = 'none'; }
+
+  // =============================
+  // 6) Built-in sample (visual test cases)
+  // =============================
+  const sampleNodes = [
+    { id: 'Sampling', label: 'Sampling', module: 'Sampling', type: 'Topic' },
+    { id: 'DFT Algorithm', label: 'DFT Algorithm', module: 'DFT_FFT', type: 'Topic' },
+    { id: 'Using the DFT', label: 'Using the DFT', module: 'DFT_FFT', type: 'Topic' },
+    { id: 'Windowing for DFT', label: 'Windowing for DFT', module: 'DFT_FFT', type: 'Topic' },
+    { id: 'STFT & Spectrograms', label: 'STFT & Spectrograms', module: 'TimeFrequency', type: 'Topic' },
+    { id: 'Least Squares / QR/SVD/Eig', label: 'Least Squares / QR/SVD/Eig', module: 'LinearAlgebra', type: 'Topic' },
+    { id: 'PCA & R^2', label: 'PCA & R^2', module: 'ML_Estimation', type: 'Topic' },
+    { id: 'FFT SW & HW', label: 'FFT SW & HW', module: 'DFT_FFT', type: 'Topic' }
+  ];
+  const sampleLinks = [
+    { source: 'Sampling', target: 'DFT Algorithm', relation: 'DEPENDS_ON' },
+    { source: 'DFT Algorithm', target: 'Using the DFT', relation: 'DEPENDS_ON' },
+    { source: 'Windowing for DFT', target: 'STFT & Spectrograms', relation: 'DEPENDS_ON' },
+    { source: 'Least Squares / QR/SVD/Eig', target: 'PCA & R^2', relation: 'DEPENDS_ON' },
+    { source: 'DFT Algorithm', target: 'FFT SW & HW', relation: 'CONTAINS' }
+  ];
+
+  // =============================
+  // 7) Data self-tests (validation)
+  // =============================
+  function runSelfTests(nodes, links){
+    // Unique node IDs
+    const ids = new Set(); const dups = [];
+    nodes.forEach(n => { if (ids.has(n.id)) dups.push(n.id); ids.add(n.id); });
+    console.assert(dups.length === 0, 'Duplicate node IDs:', dups);
+
+    // All link endpoints exist
+    const missing = links.filter(l => !ids.has(l.source) || !ids.has(l.target));
+    console.assert(missing.length === 0, 'Dangling links (missing endpoints):', missing);
+
+    // Relation values sanity
+    const badRel = links.filter(l => !['DEPENDS_ON','PART_OF','USES','CONTAINS'].includes(l.relation));
+    console.assert(badRel.length === 0, 'Unexpected relation values:', badRel);
+  }
+  </script>
+</body>
+</html>

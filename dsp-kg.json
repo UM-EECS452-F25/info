@@ -1,0 +1,133 @@
+{
+  "nodes": [
+    {
+      "id": "Foundation",
+      "label": "Foundation",
+      "module": "Foundation",
+      "type": "Topic"
+    },
+    {
+      "id": "Sampling",
+      "label": "Sampling",
+      "module": "Sampling",
+      "type": "Topic"
+    },
+    {
+      "id": "Down-Sampling",
+      "label": "Down-Sampling",
+      "module": "Down-Sampling",
+      "type": "Topic"
+    },
+    {
+      "id": "Up-Sampling",
+      "label": "Up-Sampling",
+      "module": "Up-Sampling",
+      "type": "Topic"
+    },
+    {
+      "id": "DFT Algorithm",
+      "label": "DFT Algorithm",
+      "module": "DFT_FFT",
+      "type": "Topic"
+    },
+    {
+      "id": "Using the DFT",
+      "label": "Using the DFT",
+      "module": "DFT_FFT",
+      "type": "Topic"
+    },
+    {
+      "id": "Windowing for DFT",
+      "label": "Windowing for DFT",
+      "module": "DFT_FFT",
+      "type": "Topic"
+    },
+    {
+      "id": "STFT & Spectrograms",
+      "label": "STFT & Spectrograms",
+      "module": "TimeFrequency",
+      "type": "Topic"
+    },
+    {
+      "id": "Quantization",
+      "label": "Quantization",
+      "module": "Quantization",
+      "type": "Topic"
+    },
+    {
+      "id": "Uniform Quantization",
+      "label": "Uniform Quantization",
+      "module": "Quantization",
+      "type": "Topic"
+    },
+    {
+      "id": "Least Squares / QR/SVD/Eig",
+      "label": "Least Squares / QR/SVD/Eig",
+      "module": "LinearAlgebra",
+      "type": "Topic"
+    },
+    {
+      "id": "PCA & R^2",
+      "label": "PCA & R^2",
+      "module": "ML_Estimation",
+      "type": "Topic"
+    },
+    {
+      "id": "FFT SW & HW",
+      "label": "FFT SW & HW",
+      "type": "Topic"
+    }
+  ],
+  "links": [
+    { 
+      "source": "Foundation", 
+      "target": "Sampling", 
+      "relation": "CONTAINS" 
+    },
+    { 
+      "source": "Foundation", 
+      "target": "Quantization", 
+      "relation": "CONTAINS" 
+    },
+    { 
+      "source": "DFT Algorithm", 
+      "target": "FFT SW & HW", 
+      "relation": "CONTAINS" 
+    },
+    {
+      "source": "Sampling",
+      "target": "Down-Sampling",
+      "relation": "CONTAINS"
+    },
+    {
+      "source": "Sampling",
+      "target": "Up-Sampling",
+      "relation": "CONTAINS"
+    },
+    {
+      "source": "Sampling",
+      "target": "Down-Sampling",
+      "relation": "DEPENDS_ON"
+    },
+    {
+      "source": "DFT Algorithm",
+      "target": "Using the DFT",
+      "relation": "DEPENDS_ON"
+    },
+    {
+      "source": "Windowing for DFT",
+      "target": "STFT & Spectrograms",
+      "relation": "DEPENDS_ON"
+    },
+    {
+      "source": "Quantization",
+      "target": "Uniform Quantization",
+      "relation": "DEPENDS_ON"
+    },
+    {
+      "source": "Least Squares / QR/SVD/Eig",
+      "target": "PCA & R^2",
+      "relation": "DEPENDS_ON"
+    }
+  ]
+}
