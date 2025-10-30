@@ -129,7 +129,7 @@
     {
       "id": "Beam Forming",
       "label": "Beam Forming",
-      "module": "Communications",
+      "module": "DFT_FFT",
       "type": "Topic"
     },
     {
@@ -147,7 +147,7 @@
   ],
   "links": [
     { 
-      "source": "Foundation", 
+      "source": "DFT", 
       "target": "Sampling", 
       "relation": "CONTAINS" 
     },
@@ -172,7 +172,7 @@
       "relation": "CONTAINS" 
     },
     { 
-      "source": "Foundation", 
+      "source": "DFT", 
       "target": "Quantization", 
       "relation": "CONTAINS" 
     },
@@ -232,13 +232,23 @@
       "relation": "DEPENDS_ON"
     },
     {
-      "source": "FFT SW & HW",
+      "source": "STFT & Spectrograms",
+      "target": "Radar",
+      "relation": "DEPENDS_ON"
+    },
+    {
+      "source": "Using the DFT",
       "target": "Radar",
       "relation": "DEPENDS_ON"
     },
     {
       "source": "DFT",
       "target": "Beam Forming",
+      "relation": "CONTAINS"
+    },
+    {
+      "source": "Filter Design",
+      "target": "Radar",
       "relation": "DEPENDS_ON"
     },
     {
@@ -277,7 +287,7 @@
       "relation": "DEPENDS_ON"
     },
     {
-      "source": "Foundation",
+      "source": "Using the DFT",
       "target": "Communication",
       "relation": "CONTAINS"
     },
