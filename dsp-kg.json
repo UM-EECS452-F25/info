@@ -162,8 +162,8 @@
       "relation": "CONTAINS" 
     },
     { 
-      "source": "Linear Adaptive Filter", 
-      "target": "Least Squares / QR/SVD/Eig", 
+      "source": "Least Squares / QR/SVD/Eig", 
+      "target": "Linear Adaptive Filter", 
       "relation": "DEPENDS_ON" 
     },
     { 
@@ -232,11 +232,6 @@
       "relation": "DEPENDS_ON"
     },
     {
-      "source": "STFT & Spectrograms",
-      "target": "Radar",
-      "relation": "DEPENDS_ON"
-    },
-    {
       "source": "Using the DFT",
       "target": "Radar",
       "relation": "DEPENDS_ON"
@@ -245,16 +240,6 @@
       "source": "DFT",
       "target": "Beam Forming",
       "relation": "CONTAINS"
-    },
-    {
-      "source": "Filter Design",
-      "target": "Radar",
-      "relation": "DEPENDS_ON"
-    },
-    {
-      "source": "Beam Forming",
-      "target": "Radar",
-      "relation": "DEPENDS_ON"
     },
     {
       "source": "Least Squares / QR/SVD/Eig",
