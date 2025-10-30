@@ -25,7 +25,7 @@
       "type": "Topic"
     },
     {
-      "id": "DFT Algorithm",
+      "id": "DFT",
       "label": "DFT Algorithm",
       "module": "DFT_FFT",
       "type": "Topic"
@@ -76,6 +76,41 @@
       "id": "FFT SW & HW",
       "label": "FFT SW & HW",
       "type": "Topic"
+    },
+    {
+      "id": "Filter Design",
+      "label": "Filter Design",
+      "type": "Topic"
+    },
+    {
+      "id": "Linear Adaptive Filter",
+      "label": "Linear Adaptive Filter",
+      "type": "Topic"
+    },
+    {
+      "id": "Kalman Filter",
+      "label": "Kalman Filter",
+      "type": "Topic"
+    },
+    {
+      "id": "Radar",
+      "label": "Radar",
+      "type": "Application"
+    },
+    {
+      "id": "Beam Forming",
+      "label": "Beam Forming",
+      "type": "Topic"
+    },
+    {
+      "id": "SLAM",
+      "label": "SLAM",
+      "type": "Application"
+    },
+    {
+      "id": "Sensor Fusion",
+      "label": "Sensor Fusion",
+      "type": "Topic"
     }
   ],
   "links": [
@@ -87,11 +122,6 @@
     { 
       "source": "Foundation", 
       "target": "Quantization", 
-      "relation": "CONTAINS" 
-    },
-    { 
-      "source": "DFT Algorithm", 
-      "target": "FFT SW & HW", 
       "relation": "CONTAINS" 
     },
     {
@@ -110,9 +140,34 @@
       "relation": "DEPENDS_ON"
     },
     {
-      "source": "DFT Algorithm",
+      "source": "Quantization",
+      "target": "Uniform Quantization",
+      "relation": "CONTAINS"
+    },
+    { 
+      "source": "DFT", 
+      "target": "Quantization", 
+      "relation": "DEPENDS_ON" 
+    },
+    { 
+      "source": "DFT", 
+      "target": "FFT SW & HW", 
+      "relation": "CONTAINS" 
+    },
+    {
+      "source": "DFT",
       "target": "Using the DFT",
-      "relation": "DEPENDS_ON"
+      "relation": "CONTAINS"
+    },
+    {
+      "source": "DFT",
+      "target": "Windowing for DFT",
+      "relation": "CONTAINS"
+    },
+    {
+      "source": "DFT",
+      "target": "STFT & Spectrograms",
+      "relation": "CONTAINS"
     },
     {
       "source": "Windowing for DFT",
@@ -120,13 +175,48 @@
       "relation": "DEPENDS_ON"
     },
     {
-      "source": "Quantization",
-      "target": "Uniform Quantization",
+      "source": "FFT SW & HW",
+      "target": "Radar",
+      "relation": "DEPENDS_ON"
+    },
+    {
+      "source": "DFT",
+      "target": "Beam Forming",
+      "relation": "DEPENDS_ON"
+    },
+    {
+      "source": "Beam Forming",
+      "target": "Radar",
       "relation": "DEPENDS_ON"
     },
     {
       "source": "Least Squares / QR/SVD/Eig",
       "target": "PCA & R^2",
+      "relation": "DEPENDS_ON"
+    },
+    {
+      "source": "Sensor Fusion",
+      "target": "SLAM",
+      "relation": "DEPENDS_ON"
+    },
+    {
+      "source": "Kalman Filter",
+      "target": "Sensor Fusion",
+      "relation": "DEPENDS_ON"
+    },
+    {
+      "source": "DFT",
+      "target": "Filter Design",
+      "relation": "DEPENDS_ON"
+    },
+    {
+      "source": "Filter Design",
+      "target": "Linear Adaptive Filter",
+      "relation": "DEPENDS_ON"
+    },
+    {
+      "source": "Linear Adaptive Filter",
+      "target": "Kalman Filter",
       "relation": "DEPENDS_ON"
     }
   ]
