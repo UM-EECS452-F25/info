@@ -300,6 +300,11 @@
       "source": "Communication",
       "target": "Demodulation",
       "relation": "CONTAINS"
+    },
+    {
+      "source": "Least Squares / QR/SVD/Eig",
+      "target": "Communication",
+      "relation": "DEPENDS_ON"
     }
   ]
 }
