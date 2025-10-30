@@ -61,6 +61,12 @@
       "type": "Topic"
     },
     {
+      "id": "Matrix Decomposition",
+      "label": "Matrix Decomposition",
+      "module": "LinearAlgebra",
+      "type": "Topic"
+    },
+    {
       "id": "Least Squares / QR/SVD/Eig",
       "label": "Least Squares / QR/SVD/Eig",
       "module": "LinearAlgebra",
@@ -75,41 +81,67 @@
     {
       "id": "FFT SW & HW",
       "label": "FFT SW & HW",
+      "module": "DFT_FFT",
       "type": "Topic"
     },
     {
       "id": "Filter Design",
       "label": "Filter Design",
+      "module": "Filters",
       "type": "Topic"
     },
     {
       "id": "Linear Adaptive Filter",
       "label": "Linear Adaptive Filter",
+      "module": "Filters",
       "type": "Topic"
     },
     {
       "id": "Kalman Filter",
       "label": "Kalman Filter",
+      "module": "Filters",
       "type": "Topic"
     },
     {
       "id": "Radar",
       "label": "Radar",
+      "module": "Application",
       "type": "Application"
+    },
+    {
+      "id": "Communication",
+      "label": "Communication",
+      "module": "Communications",
+      "type": "Topic"
+    },
+    {
+      "id": "Modulation",
+      "label": "Modulation",
+      "module": "Communications",
+      "type": "Topic"
+    },
+    {
+      "id": "Demodulation",
+      "label": "Demodulation",
+      "module": "Communications",
+      "type": "Topic"
     },
     {
       "id": "Beam Forming",
       "label": "Beam Forming",
+      "module": "Communications",
       "type": "Topic"
     },
     {
       "id": "SLAM",
       "label": "SLAM",
+      "module": "Application",
       "type": "Application"
     },
     {
       "id": "Sensor Fusion",
       "label": "Sensor Fusion",
+      "module": "Application",
       "type": "Topic"
     }
   ],
@@ -117,6 +149,21 @@
     { 
       "source": "Foundation", 
       "target": "Sampling", 
+      "relation": "CONTAINS" 
+    },
+    { 
+      "source": "Foundation", 
+      "target": "DFT", 
+      "relation": "CONTAINS" 
+    },
+    { 
+      "source": "Foundation", 
+      "target": "Matrix Decomposition", 
+      "relation": "CONTAINS" 
+    },
+    { 
+      "source": "Matrix Decomposition", 
+      "target": "Least Squares / QR/SVD/Eig", 
       "relation": "CONTAINS" 
     },
     { 
@@ -147,6 +194,11 @@
     { 
       "source": "DFT", 
       "target": "Quantization", 
+      "relation": "DEPENDS_ON" 
+    },
+    { 
+      "source": "DFT", 
+      "target": "Sampling", 
       "relation": "DEPENDS_ON" 
     },
     { 
@@ -218,6 +270,21 @@
       "source": "Linear Adaptive Filter",
       "target": "Kalman Filter",
       "relation": "DEPENDS_ON"
+    },
+    {
+      "source": "Foundation",
+      "target": "Communication",
+      "relation": "CONTAINS"
+    },
+    {
+      "source": "Communication",
+      "target": "Modulation",
+      "relation": "CONTAINS"
+    },
+    {
+      "source": "Communication",
+      "target": "Demodulation",
+      "relation": "CONTAINS"
     }
   ]
 }
