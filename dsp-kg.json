@@ -162,6 +162,11 @@
       "relation": "CONTAINS" 
     },
     { 
+      "source": "Linear Adaptive Filter", 
+      "target": "Least Squares / QR/SVD/Eig", 
+      "relation": "DEPENDS_ON" 
+    },
+    { 
       "source": "Matrix Decomposition", 
       "target": "Least Squares / QR/SVD/Eig", 
       "relation": "CONTAINS" 
